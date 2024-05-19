@@ -76,11 +76,12 @@ contract MyMarket is ReentrancyGuard {
     require(IERC721(nftContract).getApproved(tokenId) == address(this), "NFT must be approved to market");
 
     uint256 id = ++_itemCounter;
-    marketItems[id] =  MarketItem(
+    address seller = ERC721(nftContract).ownerOf(tokenId);
+    marketItems[tokenId] =  MarketItem(
       id,
       nftContract,
       tokenId,
-      payable(msg.sender),
+      payable(seller),
       payable(address(0)),
       price,
       State.Created
@@ -116,7 +117,6 @@ contract MyMarket is ReentrancyGuard {
       0,
       State.Inactive
     );
-
   }
 
   /**
@@ -134,7 +134,6 @@ contract MyMarket is ReentrancyGuard {
     MarketItem  storage item = marketItems[id]; 
     uint price = item.price;
     uint tokenId = item.tokenId;
-
     require(msg.value == price, "Please submit the asking price");
     require(IERC721(nftContract).getApproved(tokenId) == address(this), "NFT must be approved to market");
 
@@ -154,7 +153,7 @@ contract MyMarket is ReentrancyGuard {
       msg.sender,
       price,
       State.Release
-    );    
+    ); 
   }
 
   /**
@@ -175,7 +174,9 @@ contract MyMarket is ReentrancyGuard {
   function fetchMyPurchasedItems() public view returns (MarketItem[] memory) {
     return fetchHepler(FetchOperator.MyPurchasedItems);
   }
-
+  function fetchMySoldItems() public view returns (MarketItem[] memory) {
+    return fetchHepler(FetchOperator.MySoldItems);
+  }
   /**
    * @dev Returns only market items a user has created
    * todo pagination
@@ -184,7 +185,7 @@ contract MyMarket is ReentrancyGuard {
     return fetchHepler(FetchOperator.MyCreatedItems);
   }
 
-  enum FetchOperator { ActiveItems, MyPurchasedItems, MyCreatedItems}
+  enum FetchOperator { ActiveItems, MyPurchasedItems, MyCreatedItems, MySoldItems}
 
   /**
    * @dev fetch helper
@@ -228,6 +229,12 @@ contract MyMarket is ReentrancyGuard {
         (item.buyer == address(0) 
           && item.state == State.Created
           && (IERC721(item.nftContract).getApproved(item.tokenId) == address(this))
+        )? true
+         : false;
+    }else if(_op == FetchOperator.MySoldItems){
+      return 
+        (item.seller == msg.sender
+          && item.buyer != address(0)
         )? true
          : false;
     }else{

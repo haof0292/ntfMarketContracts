@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 
 contract HxToken is ERC721 {
-    uint256 private _currentTokenId; //tokenId will start from 1
+    error TokenIdAlreadyExits(uint);
     constructor(
         string memory _name,
         string memory _symbol
@@ -20,18 +20,11 @@ contract HxToken is ERC721 {
      * @dev Mints a token to an address with a tokenURI.
      * @param _to address of the future owner of the token
      */
-    function mintTo(address _to) public {
-        uint256 newTokenId = _getNextTokenId();
-        _mint(_to, newTokenId);
-        
-    }
-
-    /**
-     * @dev calculates the next token ID based on value of _currentTokenId
-     * @return uint256 for the next token ID
-     */
-    function _getNextTokenId() private  returns (uint256) {
-        return ++_currentTokenId;
+    function mintTo(address _to, uint tokenId) public {
+        if (_ownerOf(tokenId) != address(0)) {
+            revert TokenIdAlreadyExits(tokenId);
+        }
+        _mint(_to, tokenId);
     }
 
     /**
@@ -52,4 +45,5 @@ contract HxToken is ERC721 {
             
         return string(abi.encodePacked("data:application/json;base64,", json));
     }    
+
 }

@@ -5,7 +5,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers"
 
 const _name='Mynft';
 const _symbol='HX';
-
+var tokenId = 1
 describe("NFTMarketplace Fetch functions", function () {
   const auctionPrice = ethers.parseUnits('1', 'ether');
   async function delpoyMarketFixture() {
@@ -16,17 +16,20 @@ describe("NFTMarketplace Fetch functions", function () {
     const market = await ethers.deployContract("MyMarket");
     const listingFee = await market.getListingFee();
     for(let i=1;i<=6;i++){
-      await nft.mintTo(address0);
+      await nft.mintTo(address0, i);
+      console.log("mint tokenId:" + i + " to account0:", address0)
     }
     // console.log("3. == mint 7-9 to account#1")
     for(let i=7;i<=9;i++){
-      await nft.connect(account1).mintTo(address1);
+      await nft.connect(account1).mintTo(address1,i);
+      console.log("mint tokenId:" + i + " to account1:", address1)
     }
   
     // console.log("2. == list 1-6 to market")
     for(let i=1;i<=6;i++){
       await nft.approve(market.getAddress(),i);
       await market.createMarketItem(nft.getAddress(), i, auctionPrice, { value: listingFee });
+      console.log("createMarketItem tokenId:" + i + " to market:")
     }    
     return {market, account0, account1, nft};
   }
@@ -83,6 +86,22 @@ describe("NFTMarketplace Fetch functions", function () {
       expect(items[0].buyer).to.be.equal(address1);//address#1
       expect(items[0].state).to.be.equal(1);//enum State.Release
   })    
-  }) 
+
+    it("Should fetchMySoldItems with correct return values", async function() {
+      const {market, account0, account1, nft} = await loadFixture(delpoyMarketFixture);
+      const address0 = await account0.getAddress();
+      const address1 = await account1.getAddress();
+      const nft_address = await nft.getAddress();
+      await market.connect(account1).createMarketSale(nft_address, 1, { value: auctionPrice})
+      const items = await market.connect(account0).fetchMySoldItems()
+
+      expect(items.length).to.be.equal(1);
+      expect(items[0].id).to.be.equal(BigInt(1));
+      expect(items[0].nftContract).to.be.equal(nft_address);
+      expect(items[0].tokenId).to.be.equal(BigInt(1));
+      expect(items[0].seller).to.be.equal(address0);
+      expect(items[0].buyer).to.be.equal(address1);
+  })  
+})   
 
 })
